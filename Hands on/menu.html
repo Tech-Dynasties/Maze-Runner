@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="./menu.css" />
+        <!-- adds the whole menu screen div -->
+        <div id = "screen">
+        <div id = "menu">
+          <button id = "btn-maze" onclick="window.location.href='./index.html'">START GAME</button>
+          </div>
+          <div id = "menu-options">
+            <button id = "btn-maze" onclick ="toggleMute()">SOUND</button>
+            <button id = "btn-maze" onclick = "window.close()">QUIT</button>
+        </div>
+    </div>
+    <!-- adds background music on menu -->
+      <audio id ="soundplay" autoplay loop> 
+        <source src = "backgroundsound.mp3" type = "audio/mp3">
+      </audio>
+      <!-- script used to toggle sound mute -->
+      <script>
+          function toggleMute(){
+              var myAudio = document.getElementById("soundplay");
+              if(myAudio.muted==true)
+              {
+                  myAudio.muted=false;
+              }
+              else{
+                  myAudio.muted=true;
+              }
+          }
+      </script> 
+  </body>
+    </head>
+</html>
+<body>
+    
