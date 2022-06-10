@@ -1,4 +1,3 @@
-//initialize global variables
 var scene,
   camera,
   cameras,
@@ -7,40 +6,12 @@ var scene,
   controls,
   clock,
   player,
-  food,
-  model,
-  player_box,
-  player_box_b,
   mixer,
   actions,
-  sun,
-  crateTexture,
-  crateNormalMap,
-  crateBumpMap,
-  crateBox,
-  b,
-  rayCaster,
-  search = [],
-  search_b = [],
-  lag = 0.08,
-  box,
-  box1,
-  box2,
-  anims;
+  sun;
 
-var isPaused = false;
-var run_f = true;
-var run_b = true;
-var turn_l = true;
-var turn_r = true;
-var crates = [];
-var loadingManager = null;
-var RESOURCES_LOADED = false;
-loadingManager = new THREE.LoadingManager();
-const loader = new THREE.GLTFLoader(); 
-
-//call the init function
 init();
+
 function subclip(sourceClip, name, startFrame, endFrame, fps) {
   fps = fps || 30;
 
@@ -103,72 +74,72 @@ function subclip(sourceClip, name, startFrame, endFrame, fps) {
 
   return clip;
 }
-//create the init function
+
 function init() {
-  //reference to the assets
-  const assetPath = "assets";
-  clock = new THREE.Clock(); //initialize a new clock
-    //adds scene, camera and lights
-  cameraLightAction();
-    //create and add skybox
-  addSkybox();
-    //creates renderer
-  render();
-      //creates floor/ground
-  createGround();
-      // animates the avatar
-  animateAvatar();
-      //creates loading manager and adds textures
-  loadTextures();
-      //adds maze to scene
-  createMaze();
-  mazeConfigurations();
-  loadLoadables();
-  // const btn = document.getElementById("camera-btn");
-  // btn.addEventListener("click", changeCamera);
-  window.addEventListener("resize", resize, false);
-}
-//loads food and adds the food to scene
-function loadFood(){
-  
-    //loads food on to scene
-    loader.load(
-      "assets/bought_bread/scene.gltf",
-      function (gltf) {
-        food = gltf.scene;
-        food.scale.set(25, 25, 25);
-        scene.add(food);
-  
-        food.position.set(box2.position.x, 2, box2.position.z);
-      },
-      undefined,
-      function (e) {
-        console.error(e);
-      }
-    );
-}
-// loads an attacker and adds it to scene
-function loadAttacker(){
-  loader.load(
-    "assets/Skull.gltf",
-    function (gltf) {
-      model = gltf.scene;
-      model.scale.set(2, 2, 2);
-      scene.add(model);
-      model.position.set(box1.position.x, 0, box1.position.z);
-    },
-    undefined,
-    function (e) {
-      console.error(e);
-    }
+  const assetPath = "https://niksfiles.s3.eu-west-2.amazonaws.com/";
+
+  clock = new THREE.Clock();
+
+  scene = new THREE.Scene();
+  let col = 0x605050;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(col);
+  scene.fog = new THREE.Fog(col, 10, 100);
+
+  camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
   );
-}
-//used to load avatar model, animate it and add it to scene
-function loadAvatar(){
-  loader.load("assets/fred.glb", (object) => {
-    // console.log(object.animations[0]);
+  camera.position.set(0, 4, 7);
+  camera.lookAt(0, 1.5, 0);
+
+  const ambient = new THREE.HemisphereLight(0xffffff, 0xffffff, 1.5);
+  scene.add(ambient);
+
+  const light = new THREE.DirectionalLight(0xffffff);
+  light.position.set(1, 10, 6);
+  light.castShadow = true;
+  const shadowSize = 5;
+  light.shadow.camera.top = shadowSize;
+  light.shadow.camera.bottom = -shadowSize;
+  light.shadow.camera.left = -shadowSize;
+  light.shadow.camera.right = shadowSize;
+  scene.add(light);
+  sun = light;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.shadowMap.enabled = true;
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const planeGeometry = new THREE.PlaneBufferGeometry(200, 200);
+  const planeMaterial = new THREE.MeshStandardMaterial();
+  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.rotation.x = -Math.PI / 2;
+  plane.receiveShadow = true;
+  scene.add(plane);
+
+  const grid = new THREE.GridHelper(200, 80);
+  scene.add(grid);
+
+  const anims = [
+    { start: 30, end: 59, name: "backpedal", loop: true },
+    { start: 489, end: 548, name: "idle", loop: true },
+    { start: 768, end: 791, name: "run", loop: true },
+    { start: 839, end: 858, name: "shuffleLeft", loop: true },
+    { start: 899, end: 918, name: "shuffleRight", loop: true },
+    { start: 1264, end: 1293, name: "walk", loop: true },
+  ];
+
+  //Load meshes here
+  const loader = new THREE.GLTFLoader();
+  loader.setPath(assetPath);
+
+  loader.load("fred.glb", (object) => {
     mixer = new THREE.AnimationMixer(object.scene);
-    // console.log(object);
+    console.log(mixer);
     mixer.addEventListener("finished", (e) => {
       if (e.action.next != undefined) playAction(e.action.next);
     });
@@ -180,164 +151,43 @@ function loadAvatar(){
         child.castShadow = true;
       }
     });
-  anims.forEach((anim) => {
-    const clip = subclip(
-      object.animations[0],
-      anim.name,
-      anim.start,
-      anim.end
-    );
-    const action = mixer.clipAction(clip);
-    if (!anim.loop) {
-      action.loop = THREE.LoopOnce;
-      action.clampWhenFinished = true;
-    }
-    if (anim.next != undefined) action.next = anim.next;
-    actions[anim.name] = action;
+
+    anims.forEach((anim) => {
+      const clip = subclip(
+        object.animations[0],
+        anim.name,
+        anim.start,
+        anim.end
+      );
+      const action = mixer.clipAction(clip);
+      if (!anim.loop) {
+        action.loop = THREE.LoopOnce;
+        action.clampWhenFinished = true;
+      }
+      if (anim.next != undefined) action.next = anim.next;
+      actions[anim.name] = action;
+    });
+
+    player = new THREE.Object3D();
+    sun.target = player;
+    object.scene.children[0].scale.set(0.02, 0.02, 0.02);
+    player.add(object.scene.children[0]);
+
+    createCameras();
+    addKeyboardControl();
+
+    playAction("idle");
+
+    scene.add(player);
+    update();
   });
 
-  player = new THREE.Object3D();
-  sun.target = player;
+  const btn = document.getElementById("camera-btn");
+  btn.addEventListener("click", changeCamera);
 
-  object.scene.children[0].scale.set(0.02, 0.02, 0.02);
-  player.add(object.scene.children[0]);
-  player.scale.set(0.5, 1, 1);
-
-  createCameras();
-  addKeyboardControl();
-
-  playAction("idle");
-
-  scene.add(player);
-  update();
-});
+  window.addEventListener("resize", resize, false);
 }
-//call all the loaders in one function
-function loadLoadables(){
 
-    //loads food to the scene
-  loadFood();
-    //loads an attacker to the scene
-  loadAttacker();
-    //loads actual avatar to scene
-  loadAvatar();
-}
-//function used to create skeleton for the maze
-function mazeSkeleton(gx, gy, gz, px, py, pz) {
-  var cratename = new THREE.Mesh(
-    new THREE.BoxGeometry(gx, gy, gz),
-    new THREE.MeshPhongMaterial({
-      color: 0xffffff,
-
-      map: crateTexture,
-      bumpMap: crateBumpMap,
-      normalMap: crateNormalMap,
-    })
-  );
-
-  cratename.position.set(px, py, pz);
-  cratename.receiveShadow = true;
-  cratename.castShadow = true;
-  scene.add(cratename);
-
-  cratename.name = "block";
-  crates.push(cratename);
-}
-//creates the maze using the mazeSkeleton function
-function createMaze() {
-  mazeSkeleton(20, 5, 3, 12, 3 / 2, 2.5);
-  mazeSkeleton(3, 5, 8, -2.5, 3 / 2, 2.5);
-  mazeSkeleton(80, 5, 3, 43, 3 / 2, -3);
-  mazeSkeleton(3, 5, 5, -2.5, 3 / 2, -3);
-  mazeSkeleton(3, 5, 32, -2.5, 3 / 2, 25);
-  mazeSkeleton(3, 5, 85, 83, 3 / 2, 32);
-  mazeSkeleton(3, 5, 23, 20, 3 / 2, 15);
-  mazeSkeleton(13, 5, 3, 15, 3 / 2, 28);
-  mazeSkeleton(3, 5, 20, 10, 3 / 2, 35);
-  mazeSkeleton(12, 5, 3, 21, 3 / 2, 34);
-  mazeSkeleton(160, 5, 3, 2, 3 / 2, 75);
-  mazeSkeleton(3, 5, 12, 18, 3 / 2, 70);
-  mazeSkeleton(3, 5, 12, 35, 3 / 2, 70);
-  mazeSkeleton(3, 5, 45, -8, 2 / 2, 55);
-  mazeSkeleton(75, 5, 3, -40, 3 / 2, -3);
-  mazeSkeleton(3, 5, 70, -78, 3 / 2, 32);
-  mazeSkeleton(3, 5, 65, 55, 3 / 2, 37);
-  mazeSkeleton(44, 5, 3, 55, 3 / 2, 40);
-  mazeSkeleton(3, 5, 60, -40, 3 / 2, 40);
-  mazeSkeleton(54, 5, 3, -40, 3 / 2, 40);
-}
-//initializes a renderer
-function render(){
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.shadowMap.enabled = true;
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-}
-//sets the camera, scene and the lighting
-function cameraLightAction(){
-  //add a scene
-  scene = new THREE.Scene();
-  let col = 0xffffff;
-  scene.background = new THREE.Color(col);
-  scene.fog = new THREE.Fog(col, 10, 100); //adds fog to scene
-
-  //add a perspective camera
-  camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.set(0, 4, 7);
-  camera.lookAt(0, 1.5, 0);
-
-  //add ambient light
-  const ambient = new THREE.AmbientLight(0x404040, 2);
-  scene.add(ambient);
-  //add directional light
-  const light1 = new THREE.DirectionalLight(0xffffff, 2);
-  light1.position.set(100, 100, 100);
-  const light2 = new THREE.DirectionalLight(0xffffff, 2);
-  light2.position.set(0, 1, 100);
-
-  sun = light1; //sun is directional light one
-}
-//implements a skybox for the scene
-function addSkybox(){
-  var skybox = new THREE.CubeTextureLoader();
-  var texture = skybox.load([
-    "img/cocoa_ft.jpg",
-    "img/cocoa_bk.jpg",
-    "img/cocoa_up.jpg",
-    "img/cocoa_dn.jpg",
-    "img/cocoa_rt.jpg",
-    "img/cocoa_lf.jpg",
-  ]);
-  scene.background = texture;
-}
-//used to animate the avatar
-function animateAvatar(){
-    anims = [
-    { start: 30, end: 59, name: "backpedal", loop: true },
-    { start: 489, end: 548, name: "idle", loop: true },
-    { start: 768, end: 791, name: "run", loop: true },
-    { start: 839, end: 858, name: "shuffleLeft", loop: true },
-    { start: 899, end: 918, name: "shuffleRight", loop: true },
-    { start: 1264, end: 1293, name: "walk", loop: true },
-  ];
-}
-//creates ground, where scene will be added on
-function createGround(){
-  const planeGeometry = new THREE.PlaneBufferGeometry(200, 200);
-  const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-  plane.rotation.x = -Math.PI / 2;
-  plane.receiveShadow = true;
-  scene.add(plane);
-}
-//loads texture scenes
-function loadTextures() {
-  var textureLoader = new THREE.TextureLoader(loadingManager);
-  crateTexture = textureLoader.load("assets/crate0/crate0_diffuse.png");
-  crateBumpMap = textureLoader.load("assets/crate0/crate0_bump.png");
-  crateNormalMap = textureLoader.load("assets/crate0/crate0_normal.png");
-}
-//creates camera views for toggle purposes
 function createCameras() {
   cameras = [];
   cameraIndex = 0;
@@ -356,17 +206,17 @@ function createCameras() {
   overheadCam.position.set(0, 20, 0);
   cameras.push(overheadCam);
 }
-//used to toggle the camera views
+
 function changeCamera() {
   cameraIndex++;
   if (cameraIndex >= cameras.length) cameraIndex = 0;
 }
-//self explanatory really
+
 function addKeyboardControl() {
   document.addEventListener("keydown", keyDown);
   document.addEventListener("keyup", keyUp);
 }
-//function on keydown event
+
 function keyDown(evt) {
   let forward =
     player.userData.move !== undefined ? player.userData.move.forward : 0;
@@ -389,7 +239,7 @@ function keyDown(evt) {
 
   playerControl(forward, turn);
 }
-//function on keyup event
+
 function keyUp(evt) {
   let forward =
     player.userData.move !== undefined ? player.userData.move.forward : 0;
@@ -412,7 +262,7 @@ function keyUp(evt) {
 
   playerControl(forward, turn);
 }
-//adds controls to player movement for smoothness 
+
 function playerControl(forward, turn) {
   if (forward == 0 && turn == 0) {
     delete player.userData.move;
@@ -432,125 +282,7 @@ function playerControl(forward, turn) {
   }
 }
 
-function mazeConfigurations(){
-  box1 = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    new THREE.MeshPhongMaterial({
-      color: 0x444444,
-    })
-  );
-  
-  box1.position.set(23, 0, 23);
-  scene.add(box1);
-  
-  box = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, 0.05, 0.05),
-    new THREE.MeshPhongMaterial({
-      color: 0xff0000,
-    })
-  );
-  
-  box.position.set(0, 0, 0);
-  scene.add(box);
-  box.name = "player";
-  
-    box2 = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 2, 2),
-    new THREE.MeshPhongMaterial({
-      color: 0xffff00,
-    })
-  );
-  
-  box2.position.set(0, 0, 8);
-  scene.add(box2);
-  box2.name = "food";
-  
-  b = [];
-  for (let i = 0; i < scene.children.length; i++) {
-    if (scene.children[i].isMesh) {
-      b[i] = scene.children[i];
-      console.log(b[i]);
-    }
-  }
-  b.shift();
-  // b.shift();
-  // b.shift();
-  
-  console.log(b);
-  console.log(scene.children);
-  
-  rayCaster = new THREE.Raycaster();
-  search = [];
-  search_b = [];
-  lag = 0.08;
-  
-  for (let i = 0; i < 360; i += 3) {
-    search[i] = new THREE.Vector3(Math.cos(i), 0, Math.sin(i));
-    // console.log(search[i]);
-  }
-}
-function chase() {
-  search.forEach((direction) => {
-    rayCaster.set(box1.position, direction, 0, 100);
-    const intersects = rayCaster.intersectObjects(scene.children, false);
-
-    if (intersects.length > 0) {
-      if (intersects[0].object.name == "player") {
-        box1.position.x += direction.x * lag;
-        box1.position.z += direction.z * lag;
-        model.position.set(box1.position.x, 0, box1.position.z);
-      }
-    }
-  });
-}
-function checkFood() {
-  search.forEach((direction) => {
-    rayCaster.set(box.position, direction, 0, 50);
-    const intersects = rayCaster.intersectObjects(b, false);
-    if (intersects.length > 0) {
-      if (intersects[0].object.name == "food") {
-        if (intersects[0].distance < 3) {
-          box2.position.x = 100;
-          box2.position.z = 100;
-          food.position.set(box2.position.x, 2, box2.position.z);
-        }
-      }
-    }
-  });
-}
-
-for (let i = 0; i < 360; i += 3) {
-  search_b[i] = new THREE.Vector3(Math.cos(i), 0, Math.sin(i));
-}
-function checkCollision() {
-  search_b.forEach((direction) => {
-    rayCaster.set(box.position, direction, 0, 50);
-    const intersects = rayCaster.intersectObjects(b, false);
-    // console.log(intersects[1]);
-    if (intersects.length > 0) {
-      if (intersects[0].object.name == "block") {
-        if (intersects[0].distance < 0.7) {
-          // console.log(player.position);
-          box.position.x -= direction.x * 0.01;
-          // box.position.y += curr_position.y;
-          box.position.z -= direction.z * 0.01;
-
-          player.position.x = box.position.x;
-          player.position.z = box.position.z;
-        }
-      }
-    }
-  });
-}
-
 function update() {
-  // player_box.update();
-  // console.log(player.position);
-  box.position.x = player.position.x;
-  box.position.z = player.position.z;
-  chase();
-  checkCollision();
-  checkFood();
   requestAnimationFrame(update);
   renderer.render(scene, camera);
 
