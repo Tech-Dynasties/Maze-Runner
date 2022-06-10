@@ -78,14 +78,14 @@ function LostOnTime(){
   if(time==0){
     time="l";
     alert("you lost on time");
-    window.location.href = './index.html';
+    window.location.replace('./menu.html');
   }
 }
 
 function Enemy(){
   if(g_o){
     alert("Enemy got u");
-    time = "l";
+    window.location.replace('./menu.html');
   }
 }
 
