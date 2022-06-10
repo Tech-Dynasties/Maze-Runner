@@ -1,0 +1,11 @@
+Model Information:
+* title:	Flag
+* source:	https://sketchfab.com/3d-models/flag-a3bd5e4feb4643a7b8e1d521aee106f2
+* author:	Orion75 (https://sketchfab.com/Orion75)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Flag" (https://sketchfab.com/3d-models/flag-a3bd5e4feb4643a7b8e1d521aee106f2) by Orion75 (https://sketchfab.com/Orion75) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
