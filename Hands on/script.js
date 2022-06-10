@@ -77,7 +77,8 @@ function LostOnTime(){
 
   if(time==0){
     time="l";
-  alert("you lost on time");
+    alert("you lost on time");
+    window.location.href = './index.html';
   }
 }
 
@@ -162,7 +163,6 @@ function init() {
     //create and add skybox
   addSkybox();
     //creates renderer
-  render();
       //creates floor/ground
   createGround();
       // animates the avatar
@@ -173,8 +173,8 @@ function init() {
   createMaze();
   mazeConfigurations();
   loadLoadables();
-  // const btn = document.getElementById("camera-btn");
-  // btn.addEventListener("click", changeCamera);
+  const btn = document.getElementById("camera-btn");
+  btn.addEventListener("click", changeCamera);
   window.addEventListener("resize", resize, false);
 }
 //loads food and adds the food to scene
@@ -335,15 +335,15 @@ function createMaze() {
   mazeSkeleton(3, 5, 60, -40, 3 / 2, 40);
   mazeSkeleton(54, 5, 3, -40, 3 / 2, 40);
 }
-//initializes a renderer
-function render(){
+
+//sets the camera, scene and the lighting
+function cameraLightAction() {
+  //initializes a renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.shadowMap.enabled = true;
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-}
-//sets the camera, scene and the lighting
-function cameraLightAction(){
+
   //add a scene
   scene = new THREE.Scene();
   let col = 0xffffff;
@@ -351,9 +351,12 @@ function cameraLightAction(){
   scene.fog = new THREE.Fog(col, 10, 100); //adds fog to scene
 
   //add a perspective camera
-  camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  
   camera.position.set(0, 4, 7);
   camera.lookAt(0, 1.5, 0);
+  controls.update(); 
 
   //add ambient light
   const ambient = new THREE.AmbientLight(0x404040, 2);
